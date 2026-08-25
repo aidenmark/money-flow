@@ -24,7 +24,7 @@ lot. That single fact drove every architectural decision:
 | Constraint | Consequence |
 |---|---|
 | The data must never leave the machine | No server, no API, no telemetry, no analytics |
-| It must work with no internet | No CDN, no runtime dependencies |
+| It must work with no internet | No CDN, no runtime dependencies — the fonts are embedded, not fetched |
 | It must survive neglect | No runtime toolchain to rot, no lockfile to bit-rot |
 | It must be auditable by its owner | One file they can read, copy, and back up |
 
@@ -32,6 +32,12 @@ The result is unusual — 200KB of HTML with inline CSS and JavaScript — and i
 a deliberate trade, not an accident. What it costs is module boundaries and a
 component framework. What it buys is a document that will still open in ten
 years, from a USB stick, on a plane.
+
+Nothing is requested from another origin. The six font faces the page uses are
+base64-embedded as latin subsets — a page about someone's money should not
+announce itself to a font CDN every time it opens, and "works offline" is not
+true if the typography needs a network. It costs ~330KB and buys a claim that
+survives someone opening devtools.
 
 ### Keeping one file and one source of truth
 
@@ -162,6 +168,11 @@ intact.
 No component is reused across pages. Sameness reads as flatness, and a dashboard
 where every page opens identically teaches you to stop looking.
 
+It also reads **.xlsx with no library** — `readWorkbook` unzips the archive with
+`DecompressionStream` and walks the sheet XML, so numbers can be edited in a
+spreadsheet and pulled back in. [`sample-inputs.xlsx`](sample-inputs.xlsx) in this
+repo is a working example: change a shaded cell, save, and press **Spreadsheet**.
+
 Other things worth a look: the **bill calendar**, which plots each bill on its due
 day and makes visible that bills *cluster* — a sorted list tells you what is big,
 but not that the 24th to the 30th is a wall; and **plan-versus-actual**, which
@@ -177,6 +188,8 @@ git clone https://github.com/aidenmark/money-flow && cd money-flow
 open index.html          # that is the whole install step — no npm install
 npm test                 # optional: 21 tests, no dependencies
 ```
+
+CI runs `npm test` on every push; there is no install step there either.
 
 Tested in Chrome and Safari, at 1512 / 1024 / 700 / 430px, in both appearances.
 
