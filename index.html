@@ -1840,7 +1840,7 @@ function applyWorkbook(sheets){
     const set=(k,fn)=>{ const v=num(map[k]); if(v!==undefined && !isNaN(v)){ fn(v); changed++; } };
     set('your_paycheck',            v=> MONEY.income[0].amount=v);
     set('your_paycheck_every_days', v=> MONEY.income[0].every=Math.round(v));
-    set('mom_ssi',                  v=> MONEY.income[1].amount=v);
+    set('other_income',                  v=> MONEY.income[1].amount=v);
     set('bare_living',              v=> MONEY.livingFloor=v);
     set('amex_balance',  v=> MONEY.cards[0].balance=v);
     set('amex_apr',      v=> MONEY.cards[0].apr=v);
@@ -1851,7 +1851,7 @@ function applyWorkbook(sheets){
     set('apple_goal',    v=> MONEY.cards[1].goal=v);
     set('apple_august_payment', v=> MONEY.cards[1].firstPay=v);
     set('your_floor',    v=>{ VIEW.per=v; });   /* still feeds the paycheck projection */
-    set('mom_floor',     v=>{ VIEW.mom=v; });
+    set('other_floor',     v=>{ VIEW.other=v; });
     const rent=MONEY.bills.find(b=>b.name==='Rent'); if(rent) MONEY.rentFloat=rent.amount;
   }
   const BL=sheets['Bills'];
@@ -1872,7 +1872,7 @@ function applyWorkbook(sheets){
       if(old.estimate) row.estimate=true;
       if(old.augOnly)  row.augOnly=old.augOnly;
       if(old.byMonth)  row.byMonth=old.byMonth;
-      if(who==='mom'){ row.from='other'; care.push(row); } else { bills.push(row); }
+      if(who==='other'){ row.from='other'; care.push(row); } else { bills.push(row); }
       changed++;
     }
     if(bills.length){
@@ -2291,7 +2291,7 @@ function glide(bal, r, goal, n){
   return Math.max(0,(bal*g-goal)/((g-1)/r));
 }
 
-function project(yourFloor, momFloor){
+function project(yourFloor, otherFloor){
   const P=buildSchedule();
   const cards=MONEY.cards.map(c=>({...c, bal:c.balance}));
   const [A,B]=cards;
@@ -2339,7 +2339,7 @@ function project(yourFloor, momFloor){
     });
 
     /* now your floor takes what it can from whatever is left */
-    const target = pp.src.id==='mine' ? yourFloor : momFloor;
+    const target = pp.src.id==='mine' ? yourFloor : otherFloor;
     const kept = Math.min(target, pot);
     pot -= kept;
     pp.shortOfFloor = Math.max(0, target - kept);
@@ -2421,7 +2421,7 @@ function periods(count){ return (VIEW.plan ? VIEW.plan.periods : []).slice(0, co
 /* ==========================================================================
    RENDER
    ========================================================================== */
-let VIEW={per:600, mom:1000, plan:null};
+let VIEW={per:600, other:1000, plan:null};
 
 function renderToday(){
   $('#todayChip').innerHTML = `today is <b>${fmtDay(TODAY)}</b>`;
@@ -3719,17 +3719,17 @@ const flagSum  = (cats,f) => cats.reduce((s,c)=>s + c.items.filter(i=>i[2]===f)
 function whereData(){
   const all   = MONEY.spend.categories;
   const cats  = WHERE.view==='both' ? all : all.filter(c=>c.own!=='other');
-  const mine  = MONEY.income[0].amount*26/12, mom = MONEY.spend.otherIncome;
+  const mine  = MONEY.income[0].amount*26/12, other = MONEY.spend.otherIncome;
   const debt  = catSum(all.find(c=>c.name==='Debt payments'));
   const drop  = WHERE.when==='after' ? debt : 0;
   const rows  = cats.map(c=>({ name:c.name, amt:catSum(c) - (c.name==='Debt payments'?drop:0),
                                slot:all.indexOf(c), temp:c.name==='Debt payments' }))
                     .filter(r=>r.amt>0.005);
   const out   = rows.reduce((s,r)=>s+r.amt, 0);
-  const income= WHERE.view==='both' ? mine+mom : mine;
-  return { all, cats, rows, out, income, mine, mom, debt,
+  const income= WHERE.view==='both' ? mine+other : mine;
+  return { all, cats, rows, out, income, mine, other, debt,
            shared:all.filter(c=>c.own==='shared').reduce((s,c)=>s+catSum(c),0),
-           momsOwn:all.filter(c=>c.own==='other').reduce((s,c)=>s+catSum(c),0),
+           otherOwn:all.filter(c=>c.own==='other').reduce((s,c)=>s+catSum(c),0),
            minesOwn:all.filter(c=>c.own==='mine').reduce((s,c)=>s+catSum(c),0) };
 }
 function renderWhere(){
@@ -3805,24 +3805,24 @@ function renderWhere(){
 
   /* --- the parent's benefit and yours --- */
   const p = WHERE.share/100, drop = WHERE.when==='after' ? d.debt : 0;
-  const momPays = d.momsOwn + p*d.shared, momBanks = d.mom - momPays;
+  const otherPays = d.otherOwn + p*d.shared, otherBanks = d.other - otherPays;
   const youPay  = (1-p)*d.shared + d.minesOwn - drop, youLeft = d.mine - youPay;
   $('#splitLede').innerHTML =
     `Of the <b>${money(d.shared)}</b> a month you both use &mdash; rent, the lights, the internet,
      groceries, the car &mdash; the parent&rsquo;s benefit covers <b>${WHERE.share}%</b>. Everything of theirs
-     (${money(d.momsOwn)}) is already theirs; everything of yours (${money(d.minesOwn - drop)}) is already yours.`;
+     (${money(d.otherOwn)}) is already theirs; everything of yours (${money(d.minesOwn - drop)}) is already yours.`;
   const cell = (k,v,cls) => `<div class="sn ${cls||''}"><div class="k">${k}</div>
                              <div class="v">${money(v)}</div></div>`;
   $('#splitNums').innerHTML =
-    cell('Parent pays', momPays) + cell('Parent banks', momBanks, momBanks>=0?'good':'bad') +
+    cell('Parent pays', otherPays) + cell('Parent banks', otherBanks, otherBanks>=0?'good':'bad') +
     cell('You pay', youPay)   + cell('You have left', youLeft, youLeft>=0?'good':'bad');
-  $('#splitNote').innerHTML = (youLeft>=0 && momBanks>=0)
-    ? `Both of you are above water here. the parent keeps <b>${money(momBanks)}</b> a month &mdash;
-       <b>${money(momBanks*12)}</b> a year that stops disappearing into a card.`
+  $('#splitNote').innerHTML = (youLeft>=0 && otherBanks>=0)
+    ? `Both of you are above water here. the parent keeps <b>${money(otherBanks)}</b> a month &mdash;
+       <b>${money(otherBanks*12)}</b> a year that stops disappearing into a card.`
     : youLeft < 0
       ? `You come up <b>${money(-youLeft)}</b> short at this split. Slide right, or wait for February &mdash;
          the cards leaving is worth <b>${money(d.debt)}</b> a month to this number.`
-      : `the parent&rsquo;s benefit cannot stretch this far &mdash; the user would be <b>${money(-momBanks)}</b> short. Slide left.`;
+      : `the parent&rsquo;s benefit cannot stretch this far &mdash; the user would be <b>${money(-otherBanks)}</b> short. Slide left.`;
 
   /* hovering either the arc or its legend row lights up both */
   const link = i => {
@@ -3840,7 +3840,7 @@ function renderWhere(){
 }
 
 function recompute(){
-  VIEW.plan=project(VIEW.per, VIEW.mom);
+  VIEW.plan=project(VIEW.per, VIEW.other);
   const pl=VIEW.plan;
   renderNow(); renderPaycheck(); renderFreedom(); drawRunway();
   if($('#ovKpi')) { renderOverview(); drawOvRunway(); }
