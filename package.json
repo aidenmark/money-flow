@@ -1,0 +1,11 @@
+{
+  "name": "money-flow",
+  "version": "1.0.0",
+  "description": "A dependency-free personal finance dashboard that runs from a single HTML file, offline.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "license": "MIT"
+}
