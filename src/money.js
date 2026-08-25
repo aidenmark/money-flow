@@ -105,6 +105,11 @@ export function livingRates(monthlyLiving, monthlyIrregular) {
  * because something unplanned had to be paid instead. Interest does not pause
  * while you catch up, which is why consistency beats size.
  *
+ * Inputs are validated rather than trusted: a non-numeric balance or payment
+ * silently becomes NaN, and NaN propagates through every later month before it
+ * ever reaches a screen. Failing loudly at the boundary is cheaper than
+ * explaining $NaN to whoever is looking at their own money.
+ *
  * @param {{name: string, balance: number, apr: number}[]} cards
  * @param {number} monthly
  * @param {number} [skipEvery] miss the payment every Nth month
@@ -112,6 +117,11 @@ export function livingRates(monthlyLiving, monthlyIrregular) {
  * @returns {{months: number, interest: number, stalled: boolean, cards: object[], series: {month: number, total: number}[]}}
  */
 export function payoff(cards, monthly, skipEvery = 0, cap = 400) {
+  if (!Number.isFinite(monthly)) throw new TypeError('monthly must be a finite number');
+  for (const c of cards) {
+    if (!Number.isFinite(c.balance)) throw new TypeError(`${c.name}: balance must be a finite number`);
+    if (!Number.isFinite(c.apr)) throw new TypeError(`${c.name}: apr must be a finite number`);
+  }
   const work = cards
     .map(c => ({ ...c, bal: c.balance, clearedIn: null }))
     .sort((a, b) => b.apr - a.apr);

@@ -1796,8 +1796,8 @@ const MONEY = {
   },
 
   cards:[
-    {id:'amex',  name:'Card A', balance:3240.00, apr:0.2699, goal:800.00, day:19, firstPay:'2026-08-19'},
-    {id:'apple', name:'Card B', balance:1480.00, apr:0.2449, goal:400.00, day:27, firstPay:'2026-08-28'}
+    {id:'amex',  name:'Card A', balance:3240.00, apr:0.2699, goal:800.00, day:19, firstPay:420.00},
+    {id:'apple', name:'Card B', balance:1480.00, apr:0.2449, goal:400.00, day:27, firstPay:210.00}
   ],
 
   strategy:'goal',
@@ -2019,6 +2019,11 @@ function livingRates(monthlyLiving, monthlyIrregular) {
  * because something unplanned had to be paid instead. Interest does not pause
  * while you catch up, which is why consistency beats size.
  *
+ * Inputs are validated rather than trusted: a non-numeric balance or payment
+ * silently becomes NaN, and NaN propagates through every later month before it
+ * ever reaches a screen. Failing loudly at the boundary is cheaper than
+ * explaining $NaN to whoever is looking at their own money.
+ *
  * @param {{name: string, balance: number, apr: number}[]} cards
  * @param {number} monthly
  * @param {number} [skipEvery] miss the payment every Nth month
@@ -2026,6 +2031,11 @@ function livingRates(monthlyLiving, monthlyIrregular) {
  * @returns {{months: number, interest: number, stalled: boolean, cards: object[], series: {month: number, total: number}[]}}
  */
 function payoff(cards, monthly, skipEvery = 0, cap = 400) {
+  if (!Number.isFinite(monthly)) throw new TypeError('monthly must be a finite number');
+  for (const c of cards) {
+    if (!Number.isFinite(c.balance)) throw new TypeError(`${c.name}: balance must be a finite number`);
+    if (!Number.isFinite(c.apr)) throw new TypeError(`${c.name}: apr must be a finite number`);
+  }
   const work = cards
     .map(c => ({ ...c, bal: c.balance, clearedIn: null }))
     .sort((a, b) => b.apr - a.apr);
@@ -2364,7 +2374,11 @@ function project(yourFloor, otherFloor){
       const int = c.id==='amex' ? iA : iB;
       /* August is a number the card told you. After that the minimum floats
          down with the balance, the usual interest plus one percent. */
-      const floorPay = c.firstPay!==undefined && !c.paidOnce ? c.firstPay : 40;
+      /* firstPay is an AMOUNT, not a date. A non-numeric value here used to turn
+         `need` into NaN, which poisoned the balance for every later cheque and
+         printed $NaN across the page — so it is validated rather than trusted. */
+      const first = Number(c.firstPay);
+      const floorPay = (!c.paidOnce && Number.isFinite(first)) ? first : 40;
       c.paidOnce = true;
       let need = Math.min(c.bal, Math.max(floorPay, int + 0.01*c.bal));
       const saved = minCredit.get(c.name) || 0;

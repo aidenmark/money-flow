@@ -130,3 +130,14 @@ test('cushionTarget is three months of irregular spending, rounded', () => {
   assert.equal(cushionTarget(360), 1100);
   assert.equal(cushionTarget(100), 300);
 });
+
+test('payoff refuses a non-numeric payment instead of returning NaN', () => {
+  assert.throws(() => payoff(CARDS, '900'), TypeError);
+  assert.throws(() => payoff(CARDS, undefined), TypeError);
+});
+
+test('payoff refuses a card whose balance is not a number', () => {
+  // The real bug this guards: a date string where an amount belonged. It turned
+  // one balance into NaN, which then propagated to every later month.
+  assert.throws(() => payoff([{ name: 'Card A', balance: '2026-08-19', apr: 0.27 }], 500), TypeError);
+});
