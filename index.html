@@ -1886,6 +1886,178 @@ function applyWorkbook(sheets){
 }
 
 /* ---------- small helpers ---------- */
+/* === inlined from src/money.js — regenerate with `npm run build` === */
+const Core = (function(){
+/** Milliseconds in a day. */
+const DAY = 86400000;
+/** Average days in a month. Pay cycles are in days, bills are monthly. */
+const DAYS_IN_MONTH = 365 / 12;
+
+/** @typedef {{date: Date, amount: number}} Payday */
+
+/**
+ * Paydays for an income that repeats every N days, from an anchor date.
+ * @param {Date} anchor  a known payday
+ * @param {number} every days between paydays
+ * @param {Date} from    inclusive start
+ * @param {Date} to      inclusive end
+ * @returns {Date[]}
+ */
+function recurringPaydays(anchor, every, from, to) {
+  if (every <= 0) throw new RangeError('every must be positive');
+  const out = [];
+  let d = new Date(anchor);
+  while (d < from) d = new Date(d.getTime() + every * DAY);
+  while (d <= to) { out.push(new Date(d)); d = new Date(d.getTime() + every * DAY); }
+  return out;
+}
+
+/**
+ * The nth given weekday of a month — "the third Wednesday" and similar.
+ * @param {number} year
+ * @param {number} month  0-indexed
+ * @param {number} n      1 = first
+ * @param {number} weekday 0 = Sunday
+ * @returns {Date}
+ */
+function nthWeekdayOf(year, month, n, weekday) {
+  const first = new Date(year, month, 1);
+  const shift = (weekday - first.getDay() + 7) % 7;
+  return new Date(year, month, 1 + shift + (n - 1) * 7);
+}
+
+/**
+ * How many paydays a bill's funding window ORIGINALLY held, including any that
+ * have already passed.
+ *
+ * This is the subtle one. A monthly bill is funded by setting aside a share from
+ * each payday in its window. Divide by only the paydays that REMAIN and opening
+ * the app mid-month piles a whole month's rent onto one cheque — the app appears
+ * to demand money that was, in reality, already set aside weeks ago. Dividing by
+ * the full window keeps each cheque responsible for its own share.
+ *
+ * @param {Date} from   window start
+ * @param {Date} to     window end
+ * @param {{anchor: Date, every: number}} income
+ * @returns {number}
+ */
+function chequesInWindow(from, to, income) {
+  return recurringPaydays(income.anchor, income.every, from, to).length;
+}
+
+/**
+ * Split an amount across the cheques still ahead, using the full window as the
+ * divisor.
+ * @returns {{perCheque: number, parts: number, carried: boolean}}
+ */
+function shareOfBill(amount, windowCheques, remainingCheques) {
+  const parts = Math.max(remainingCheques, windowCheques || remainingCheques, 1);
+  return {
+    perCheque: amount / parts,
+    parts,
+    carried: parts > remainingCheques,
+  };
+}
+
+/**
+ * Daily rates for spending that has no due date — groceries, fuel, coffee — plus
+ * the irregular-but-certain costs (repairs, replacements, gifts) that appear on
+ * no bill at all. Omitting the second group is what makes a budget balance on
+ * paper and fail in practice.
+ * @param {number} monthlyLiving
+ * @param {number} monthlyIrregular
+ */
+function livingRates(monthlyLiving, monthlyIrregular) {
+  return {
+    daily: monthlyLiving,
+    irregular: monthlyIrregular,
+    dayRate: monthlyLiving / DAYS_IN_MONTH,
+    irrRate: monthlyIrregular / DAYS_IN_MONTH,
+  };
+}
+
+/**
+ * Amortise revolving debt at a fixed monthly payment, highest APR first.
+ *
+ * `skipEvery` models the real failure mode: a payment missed every Nth month
+ * because something unplanned had to be paid instead. Interest does not pause
+ * while you catch up, which is why consistency beats size.
+ *
+ * @param {{name: string, balance: number, apr: number}[]} cards
+ * @param {number} monthly
+ * @param {number} [skipEvery] miss the payment every Nth month
+ * @param {number} [cap] iteration guard
+ * @returns {{months: number, interest: number, stalled: boolean, cards: object[], series: {month: number, total: number}[]}}
+ */
+function payoff(cards, monthly, skipEvery = 0, cap = 400) {
+  const work = cards
+    .map(c => ({ ...c, bal: c.balance, clearedIn: null }))
+    .sort((a, b) => b.apr - a.apr);
+  const total = () => work.reduce((s, c) => s + Math.max(0, c.bal), 0);
+
+  let interest = 0, months = 0;
+  const series = [{ month: 0, total: total() }];
+
+  while (work.some(c => c.bal > 0.01) && months < cap) {
+    months++;
+    for (const c of work) {
+      if (c.bal > 0) { const i = c.bal * c.apr / 12; c.bal += i; interest += i; }
+    }
+    let pot = (skipEvery && months % skipEvery === 0) ? 0 : monthly;
+    for (const c of work) {
+      const pay = Math.min(c.bal, pot);
+      c.bal -= pay; pot -= pay;
+      if (c.bal <= 0.01 && c.clearedIn === null) c.clearedIn = months;
+    }
+    series.push({ month: months, total: total() });
+  }
+  return { months, interest, stalled: months >= cap, cards: work, series };
+}
+
+/**
+ * Can this purchase be afforded over a given horizon?
+ *
+ * Deterministic on purpose. The question is arithmetic against data the app
+ * already holds, so it needs no network call and cannot invent a balance.
+ *
+ * @param {object} o
+ * @param {number} o.balance        what is in the account now
+ * @param {number} o.incoming       money arriving inside the horizon
+ * @param {number} o.billsDue       unpaid bills that must still leave this balance
+ * @param {number} o.commitments    fixed expenses inside the horizon
+ * @param {number} o.days           days the horizon covers
+ * @param {number} o.dayRate        ordinary living cost per day
+ * @param {number} o.irrRate        irregular set-aside per day
+ * @param {number} o.amount         the price of the thing
+ * @returns {{free: number, after: number, verdict: 'yes'|'tight'|'no'}}
+ */
+function affordability(o) {
+  const living = o.dayRate * o.days;
+  const irregular = o.irrRate * o.days;
+  const free = o.balance + o.incoming - o.billsDue - o.commitments - living - irregular;
+  const after = free - o.amount;
+  return {
+    free,
+    after,
+    verdict: after >= 50 ? 'yes' : after >= 0 ? 'tight' : 'no',
+  };
+}
+
+/**
+ * The buffer target: three months of irregular spending, rounded.
+ *
+ * Three months is enough to absorb one real hit — a repair, a dental bill — and
+ * still have something left for whatever follows. It is a total to reach and
+ * hold, not a per-paycheck figure.
+ */
+function cushionTarget(monthlyIrregular, roundTo = 50) {
+  return Math.round(monthlyIrregular * 3 / roundTo) * roundTo;
+}
+
+return {DAYS_IN_MONTH, recurringPaydays, nthWeekdayOf, chequesInWindow, shareOfBill, livingRates, payoff, affordability, cushionTarget};
+})();
+/* === end src/money.js === */
+
 const $  = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const el = (t,c,h)=>{const n=document.createElement(t); if(c)n.className=c; if(h!=null)n.innerHTML=h; return n;};
@@ -1995,25 +2167,19 @@ function billOccurrences(from, to){
    made a mid-month view pile a whole month's rent onto one paycheck: the user has been
    setting money aside since the 1st, so this cheque owes only its own share. */
 function chequesInWindow(fromDate, toDate, srcId){
-  let n=0;
-  MONEY.income.forEach(src=>{
-    if(srcId && src.id!==srcId) return;
-    if(src.every){
-      let d=D(src.anchor);
-      while(d<fromDate) d=addDays(d, src.every);
-      while(d<=toDate){ n++; d=addDays(d, src.every); }
-    } else if(src.nthWeekday){
+  return MONEY.income.reduce((n, src)=>{
+    if(srcId && src.id!==srcId) return n;
+    if(src.every) return n + Core.recurringPaydays(D(src.anchor), src.every, fromDate, toDate).length;
+    if(src.nthWeekday){
       let m=new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
       while(m<=toDate){
-        const first=new Date(m.getFullYear(), m.getMonth(), 1);
-        const shift=(src.nthWeekday.weekday - first.getDay() + 7) % 7;
-        const d=new Date(m.getFullYear(), m.getMonth(), 1 + shift + (src.nthWeekday.n-1)*7);
+        const d=Core.nthWeekdayOf(m.getFullYear(), m.getMonth(), src.nthWeekday.n, src.nthWeekday.weekday);
         if(d>=fromDate && d<=toDate) n++;
         m=new Date(m.getFullYear(), m.getMonth()+1, 1);
       }
     }
-  });
-  return n;
+    return n;
+  }, 0);
 }
 
 function buildSchedule(){
@@ -2432,13 +2598,14 @@ function renderNow(){
    floor from the real minimum. Nothing here is a target the user has to hit; it is a
    worked answer the user can overrule, and what actually happens is tracked separately.
    ========================================================================== */
-const DAYS_IN_MONTH = 365/12;
+const DAYS_IN_MONTH = Core.DAYS_IN_MONTH;
 
 function livingRates(){
-  const daily = MONEY.living.reduce((s,x)=>s+x[1], 0);          /* food, coffee, household */
-  const irregular = CUSHION.absorbs.reduce((s,a)=>s+a[1], 0);    /* skincare, repairs, gifts */
-  return {daily, irregular, dayRate:daily/DAYS_IN_MONTH, irrRate:irregular/DAYS_IN_MONTH};
+  return Core.livingRates(
+    MONEY.living.reduce((s,x)=>s+x[1], 0),        /* food, fuel, coffee, household */
+    CUSHION.absorbs.reduce((s,a)=>s+a[1], 0));    /* skincare, repairs, gifts      */
 }
+
 
 function recommendFor(pp, shallow){
   const r = livingRates();
@@ -2718,18 +2885,12 @@ const RATE={
 
 /* Avalanche: interest is charged monthly, the highest rate is paid first. */
 function payoffRun(monthly, skipEvery){
-  const cards=MONEY.cards.map(c=>({...c, bal:c.balance, done:null}))
-                         .sort((a,b)=>b.apr-a.apr);
-  let interest=0, m=0, series=[{label:'now', total:cards.reduce((s,c)=>s+c.bal,0)}];
-  while(cards.some(c=>c.bal>0.01) && m<400){
-    m++;
-    cards.forEach(c=>{ if(c.bal>0){ const i=c.bal*c.apr/12; c.bal+=i; interest+=i; } });
-    let pot=(skipEvery && m%skipEvery===0)?0:monthly;
-    cards.forEach(c=>{ const pay=Math.min(c.bal,pot); c.bal-=pay; pot-=pay;
-      if(c.bal<=0.01 && !c.done) c.done=m; });
-    series.push({label:m, total:cards.reduce((s,c)=>s+Math.max(0,c.bal),0)});
-  }
-  return {months:m, interest, cards, series, stalled:m>=400};
+  const r = Core.payoff(MONEY.cards, monthly, skipEvery);
+  return {
+    months:r.months, interest:r.interest, stalled:r.stalled,
+    cards:r.cards.map(c=>({...c, done:c.clearedIn})),
+    series:r.series.map(p=>({label:p.month===0?'now':p.month, total:p.total})),
+  };
 }
 
 function renderFreedom(){
@@ -2894,10 +3055,7 @@ const CUSHION={
      below, rounded to the nearest fifty. Three months is what it takes to absorb
      one real hit (a repair, a dental bill) and still have something left for the
      next one. It is a TOTAL to reach and hold, not a per-paycheck figure. */
-  get target(){
-    const m=this.absorbs.reduce((s,a)=>s+a[1],0);
-    return Math.round(m*3/50)*50;
-  },
+  get target(){ return Core.cushionTarget(this.absorbs.reduce((s,a)=>s+a[1],0)); },
   /* Certain costs with uncertain dates. These are the reason a plan that balances
      on paper still ends the month behind — nothing else on the dashboard names them. */
   absorbs:[
@@ -3120,11 +3278,11 @@ function affordAnswer(){
     ? ps.filter(p=>p.start<horizonEnd).reduce((s,p)=>s+p.bills,0)
     : 0;
 
-  const free = bal + incoming - billsDue - commitments - living - irregular;
-  const amt=AFF.amount;
-  const after=free-amt;
-  const verdict = after>=50 ? 'yes' : after>=0 ? 'tight' : 'no';
-  return {bal, incoming, billsDue, commitments, living, irregular, free, amt, after, verdict,
+  const verdictOf = Core.affordability({
+    balance:bal, incoming, billsDue, commitments,
+    days:windowDays, dayRate:r.dayRate, irrRate:r.irrRate, amount:AFF.amount });
+  return {bal, incoming, billsDue, commitments, living, irregular,
+          free:verdictOf.free, amt:AFF.amount, after:verdictOf.after, verdict:verdictOf.verdict,
           days:windowDays, soon, horizonEnd, nxt, r};
 }
 

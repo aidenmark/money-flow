@@ -5,7 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node --test test/"
+    "build": "node tools/inline.js",
+    "test": "node tools/inline.js --check && node --test test/"
   },
   "license": "MIT"
 }

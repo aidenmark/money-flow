@@ -21,7 +21,7 @@ decision:
 |---|---|
 | The data must never leave the machine | No server, no API, no telemetry, no analytics |
 | It must work with no internet | No CDN, no runtime dependencies |
-| It must survive neglect | No build step, no toolchain to rot, no lockfile to bit-rot |
+| It must survive neglect | No runtime toolchain to rot, no lockfile to bit-rot |
 | It must be auditable by its owner | One file they can read, copy, and back up |
 
 The result is unusual — 200KB of HTML with inline CSS and JavaScript — and it is
@@ -29,12 +29,42 @@ a deliberate trade, not an accident. What it costs is module boundaries and a
 component framework. What it buys is a document that will still open in ten
 years, from a USB stick, on a plane.
 
+### Keeping one file and one source of truth
+
 The **logic worth testing does not need the DOM**, so it lives in
-[`src/money.js`](src/money.js) and is covered by [`test/money.test.js`](test/money.test.js).
+[`src/money.js`](src/money.js) — the payday scheduler, the funding-window
+divisor, the debt amortiser and the affordability calculator.
+
+That creates the obvious problem: the page ships as a single file and **ES module
+imports are blocked over `file://`**, so it cannot simply `import` the module. The
+lazy answer is two hand-maintained copies, which drift the first time anyone is in
+a hurry.
+
+Instead the module is the source of truth and is **generated into** the page:
 
 ```bash
-npm test      # 19 tests, no dependencies
+npm run build     # write src/money.js into the marked region of index.html
+npm test          # --check that it is in step, then run the suite
 ```
+
+[`tools/inline.js`](tools/inline.js) does the write; `npm test` runs its `--check`
+path first, so **a drifted page fails the suite** rather than shipping. A second
+test asserts the page actually calls `Core.payoff`, `Core.affordability` and the
+rest, so the inlined copy cannot quietly become decorative while the page keeps a
+private duplicate.
+
+The page keeps thin adapters — it knows about `MONEY`, the DOM and the clock; the
+core knows only numbers:
+
+```js
+function livingRates(){
+  return Core.livingRates(
+    MONEY.living.reduce((s,x)=>s+x[1], 0),
+    CUSHION.absorbs.reduce((s,a)=>s+a[1], 0));
+}
+```
+
+21 tests, zero dependencies, `node --test`.
 
 ---
 
@@ -129,9 +159,9 @@ through one point.
 ## Running it
 
 ```bash
-git clone <repo> && cd money-flow
-open index.html          # that is the whole install step
-npm test                 # optional: exercise the logic module
+git clone https://github.com/aidenmark/money-flow && cd money-flow
+open index.html          # that is the whole install step — no npm install
+npm test                 # optional: 21 tests, no dependencies
 ```
 
 Tested in Chrome and Safari, at 1512 / 1024 / 700 / 430px, in both appearances.
