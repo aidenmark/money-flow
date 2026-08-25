@@ -7,15 +7,19 @@ Seven pages, a dozen charts drawn from scratch in SVG, and a scheduler that turn
 a pay cycle and a pile of due dates into an answer to the only question that
 matters day to day: *what can I actually spend right now?*
 
-**[Live demo](https://aidenmark.github.io/money-flow/)** · every figure in it is fictional.
+**[Live demo](https://aidenmark.github.io/money-flow/)**
+
+The demo is a fictional single-person household — one salary, a car, a dog, two
+credit cards — with figures drawn from US averages for a single adult: a $1,545
+one-bedroom, $195 car insurance, a $420 grocery month, and a dog at roughly $126.
+No real person's data appears anywhere in this repository.
 
 ---
 
 ## Why it is built this way
 
-The file holds someone's complete financial picture — income, rent, debts,
-a household member's benefit. That single fact drove every architectural
-decision:
+The file holds someone's complete financial picture — income, rent, debts, the
+lot. That single fact drove every architectural decision:
 
 | Constraint | Consequence |
 |---|---|
@@ -133,6 +137,16 @@ so the order is documented as load-bearing and is never reshuffled for taste.
 
 ---
 
+### One household shape or another
+
+A household can have one income or two. The shared-cost slider and the
+with-or-without-them comparison only mean anything in the second case, so those
+controls are declared `data-needs="two-incomes"` and hidden when
+`MONEY.income.length < 2` — hidden rather than removed, because the renderers
+still write into those nodes and a household can gain a second income without a
+reload. The demo runs as a single-person household; the code path for two is
+intact.
+
 ## What is in it
 
 | Page | Form | Why that form |
@@ -141,9 +155,9 @@ so the order is documented as load-bearing and is never reshuffled for taste.
 | **Today** | A day-by-day runway | A stretch of days is a line, not a pie |
 | **Paycheck** | A waterfall | A cheque is a sequence of claims, each starting where the last finished |
 | **Spending** | Donut, bill calendar, line-by-line | Composition, timing, and detail are three different questions |
+| **Can I afford it?** | Question, verdict, working | An answer you can check |
 | **Cushion** | A stepped fill curve | The money arrives in lumps; a smooth curve would lie |
 | **Debt** | Shrink line + principal vs interest | Shows how much of a payment is progress and how much is rent |
-| **Can I afford it?** | Question, verdict, working | An answer you can check |
 
 No component is reused across pages. Sameness reads as flatness, and a dashboard
 where every page opens identically teaches you to stop looking.

@@ -1075,7 +1075,7 @@ details.tableview[open] summary{background:var(--raise);}
             <h3 class="card-title">Where it all goes</h3>
             <p class="card-sub" id="whereSub">&nbsp;</p>
           </div>
-          <div class="seg" role="group" aria-label="Whose money to show">
+          <div class="seg" data-needs="two-incomes" role="group" aria-label="Whose money to show">
             <button type="button" data-view="both"  aria-pressed="true">Together</button>
             <button type="button" data-view="mine"  aria-pressed="false">Just my paycheck</button>
           </div>
@@ -1105,7 +1105,7 @@ details.tableview[open] summary{background:var(--raise);}
         <p class="card-note">Locked is this year&rsquo;s reality — rent, the car, insurance, the lights. Temporary removes itself in February. The rest is yours, and it is bigger than it feels.</p>
       </article>
 
-      <article class="card c12">
+      <article class="card c12" data-needs="two-incomes">
         <div class="card-head">
           <div>
             <h3 class="card-title">The parent&rsquo;s benefit, and yours</h3>
@@ -1619,7 +1619,7 @@ details.tableview[open] summary{background:var(--raise);}
    chart and the plan-versus-actual deltas meaningful. Runs once; anything the
    visitor types afterwards is theirs and is never overwritten. */
 (function seedDemo(){
-  var K='moneyflow.demo.seeded.v1';
+  var K='moneyflow.demo.seeded.v2';
   try{ if(localStorage.getItem(K)) return; }catch(e){ return; }
   var now=new Date(), mk=function(back){
     var d=new Date(now.getFullYear(), now.getMonth()-back, 1);
@@ -1628,19 +1628,19 @@ details.tableview[open] summary{background:var(--raise);}
   /* Deliberately imperfect: over on delivery, under on the car — a tidy month
      would hide the whole point of tracking actuals. */
   var months={};
-  months[mk(0)]={'Home':2012,'Debt payments':1049,'Food & day-to-day':742,'Car':809,
-                 "Parent's care":791,'Phone, tech & streaming':450,'Beauty & fitness':110};
-  months[mk(1)]={'Home':2012,'Debt payments':1049,'Food & day-to-day':1338,'Car':809,
-                 "Parent's care":791,'Phone, tech & streaming':450,'Beauty & fitness':329};
-  months[mk(2)]={'Home':2012,'Debt payments':1049,'Food & day-to-day':1196,'Car':780,
-                 "Parent's care":791,'Phone, tech & streaming':450,'Beauty & fitness':180};
-  months[mk(3)]={'Home':2012,'Debt payments':900,'Food & day-to-day':1421,'Car':1145,
-                 "Parent's care":791,'Phone, tech & streaming':450,'Beauty & fitness':290};
+  months[mk(0)]={'Home':1828,'Debt payments':675,'Food & day-to-day':498,'Car':895,
+                 'Beauty & fitness':60,'Phone, tech & streaming':174,'The dog':126};
+  months[mk(1)]={'Home':1828,'Debt payments':675,'Food & day-to-day':862,'Car':895,
+                 'Beauty & fitness':215,'Phone, tech & streaming':174,'The dog':126};
+  months[mk(2)]={'Home':1828,'Debt payments':540,'Food & day-to-day':941,'Car':1180,
+                 'Beauty & fitness':160,'Phone, tech & streaming':174,'The dog':318};
+  months[mk(3)]={'Home':1828,'Debt payments':675,'Food & day-to-day':795,'Car':895,
+                 'Beauty & fitness':200,'Phone, tech & streaming':174,'The dog':126};
   try{
     localStorage.setItem('moneyflow.demo.actuals.v1', JSON.stringify(months));
-    localStorage.setItem('moneyflow.demo.balance.v1','742');
-    localStorage.setItem('moneyflow.demo.cushion.have','480');
-    localStorage.setItem('moneyflow.demo.payrate.v1','900');
+    localStorage.setItem('moneyflow.demo.balance.v1','615');
+    localStorage.setItem('moneyflow.demo.cushion.have','560');
+    localStorage.setItem('moneyflow.demo.payrate.v1','675');
     localStorage.setItem(K,'1');
   }catch(e){}
 })();
@@ -1654,120 +1654,111 @@ details.tableview[open] summary{background:var(--raise);}
 const MONEY = {
   name:'Money Flow',
 
+  /* One income. The app supports two — a shared household where a second person
+     contributes — and hides the shared-cost controls when there is only one. */
   income:[
-    {id:'mine',  label:'Your paycheck',      amount:2150.00, every:14, anchor:'2026-08-14'},
-    {id:'other', label:"Parent's benefit",   amount:3200.00, nthWeekday:{n:3, weekday:3}}
+    {id:'mine', label:'Your paycheck', amount:2300.00, every:14, anchor:'2026-08-14'}
   ],
 
   /* day = the day of the month it is due. augOnly overrides a single month. */
   bills:[
-    {name:'Rent',                 amount:1750.00, day:1},
-    {name:'Streaming bundle',     amount:42.00,   day:7},
-    {name:'Phone plan',           amount:210.00,  day:8},
-    {name:'Cloud storage',        amount:19.99,   day:12},
-    {name:'Music',                amount:16.99,   day:17, augPayBy:'2026-08-28'},
-    {name:'Internet',             amount:84.00,   day:17},
-    {name:'Car payment',          amount:388.00,  day:24},
-    {name:'Device cover',         amount:44.00,   day:25},
-    {name:'Car wash plan',        amount:29.00,   day:26},
-    {name:'Car insurance',        amount:262.00,  day:26},
-    {name:'Video service',        amount:26.50,   day:28},
-    {name:'Gym',                  amount:149.00,  day:28},
-    {name:'Parent device cover',  amount:11.00,   day:29},
-    {name:'Live TV',              amount:91.00,   day:30},
-    {name:'Water',                amount:68.00,   day:11, augOnly:96.00, strict:true},
-    {name:'Electricity',          amount:110.00,  day:27, augOnly:141.00, strict:true}
+    {name:'Rent',                 amount:1545.00, day:1},
+    {name:'Renters insurance',    amount:18.00,   day:5},
+    {name:'Streaming bundle',     amount:22.99,   day:7},
+    {name:'Phone plan',           amount:95.00,   day:8},
+    {name:'Cloud storage',        amount:9.99,    day:12},
+    {name:'Music',                amount:11.99,   day:17, augPayBy:'2026-08-28'},
+    {name:'Internet',             amount:75.00,   day:17},
+    {name:'Car payment',          amount:525.00,  day:24},
+    {name:'Device cover',         amount:14.99,   day:25},
+    {name:'Car insurance',        amount:195.00,  day:26},
+    {name:'Video service',        amount:18.99,   day:28},
+    {name:'Gym',                  amount:55.00,   day:28},
+    {name:'Pet insurance',        amount:56.00,   day:29},
+    {name:'Gas &amp; heat',           amount:65.00,   day:11, augOnly:88.00, strict:true},
+    {name:'Electricity',          amount:125.00,  day:27, augOnly:158.00, strict:true}
   ],
 
+  /* Appointments on a repeating cycle, paid on the day. */
   care:[
-    {name:"Parent's therapy",     amount:180.00, day:19, from:'other'},
-    {name:"Parent's transport",   amount:210.00, day:19, from:'other'},
-    {name:"Parent's hair",        amount:230.00, everyWeeks:8, anchor:'2026-08-19', from:'other'},
-    {name:'Nails',                amount:110.00, everyWeeks:3, anchor:'2026-08-15'},
-    {name:'Pedicure',             amount:70.00,  everyWeeks:3, anchor:'2026-09-05'}
+    {name:'Hair',     amount:95.00, everyWeeks:8, anchor:'2026-08-19'},
+    {name:'Nails',    amount:60.00, everyWeeks:3, anchor:'2026-08-15'},
+    {name:'Pedicure', amount:45.00, everyWeeks:3, anchor:'2026-09-05'}
   ],
 
   /* Money already set aside for a bill in an earlier month. */
   prepaid:[
-    {name:'Music',                amount:8.50},
-    {name:'Internet',             amount:42.00},
-    {name:'Cloud storage',        amount:19.99}
+    {name:'Music',         amount:6.00},
+    {name:'Internet',      amount:37.50},
+    {name:'Cloud storage', amount:9.99}
   ],
 
   /* Balances carried deliberately, with the intended catch-up plan attached. */
   catchUp:[
-    {name:'Electricity', balance:88.00,
-     plan:[{date:'2026-08-28', amount:88.00}]},
-    {name:'Water',       balance:104.00,
-     plan:[{date:'2026-08-28', amount:52.00}, {date:'2026-09-11', amount:52.00}]}
+    {name:'Electricity', balance:76.00,
+     plan:[{date:'2026-08-28', amount:76.00}]},
+    {name:'Gas &amp; heat', balance:92.00,
+     plan:[{date:'2026-08-28', amount:46.00}, {date:'2026-09-11', amount:46.00}]}
   ],
-  elsewhere:['Instalment plan'],
+  elsewhere:['Store credit'],
 
   smallDebts:[
-    {name:'Instalment plan', amount:118.00, due:'2026-08-26'},
-    {name:'Store credit',    amount:31.50,  due:'2026-08-21'}
+    {name:'Store credit', amount:45.00, due:'2026-08-21'}
   ],
 
-  /* Display-only lines: real payments that no other part of the plan models, kept
-     out of the payoff maths so no amount is ever counted twice. */
-  dueExtra:[
-    {name:'Instalment plan (order 2)', amount:24.00, date:'2026-08-27',
-     note:'part of the instalment balance already in the plan'}
-  ],
+  dueExtra:[],
 
   /* Spending that appears on no bill: it has no due date, it simply happens.
-     Leaving it out is what makes a plan balance on paper and fail in practice. */
+     Leaving it out is what makes a budget balance on paper and fail in practice. */
   living:[
-    ['Groceries',            520.00],
-    ['Fuel',                 130.00],
-    ['Delivery',             330.00],
-    ['Coffee',               120.00],
-    ['Household',             90.00],
-    ['Vending',               35.00],
-    ["Parent's weekend cash", 160.00]
+    ['Groceries',        420.00],
+    ['Fuel',             175.00],
+    ['Delivery',         220.00],
+    ['Coffee',            85.00],
+    ['Household',         70.00],
+    ['Dog food & treats', 70.00]
   ],
 
-  /* Lines that start ticked on the Today page. */
   alreadyHandled:[
     {name:'Nails', date:'2026-08-15'}
   ],
 
   spend:{
-    otherIncome:3200.00,
+    otherIncome:0,
     categories:[
-      {name:'Home',                    own:'shared', items:[
-        ['Rent',1750.00,'locked'],['Electricity',110.00,'locked'],
-        ['Water',68.00,'locked'],['Internet',84.00,'locked']]},
-      {name:'Debt payments',           own:'mine',   items:[
-        ['Card A',610.00,'temp'],['Card B',290.00,'temp'],
-        ['Instalment plan',118.00,'temp'],['Store credit',31.50,'temp']]},
-      {name:'Food & day-to-day',       own:'shared', items:[
-        ['Groceries',520.00,'locked'],['Delivery',330.00,'flex'],
-        ['Coffee',120.00,'flex'],['Vending',35.00,'flex'],['Household',90.00,'locked']]},
-      {name:'Car',                     own:'shared', items:[
-        ['Car payment',388.00,'locked'],['Car insurance',262.00,'locked'],
-        ['Fuel',130.00,'locked'],['Car wash plan',29.00,'locked']]},
-      {name:"Parent's care",           own:'other',   items:[
-        ['Therapy',180.00,'locked'],['Transport',210.00,'locked'],['Hair',230.00,'locked'],
-        ['Device cover',11.00,'locked'],['Weekend cash',160.00,'locked']]},
-      {name:'Phone, tech & streaming', own:'mine',   items:[
-        ['Phone plan',210.00,'locked'],['Live TV',91.00,'flex'],
-        ['Device cover',44.00,'flex'],['Streaming bundle',42.00,'flex'],
-        ['Video service',26.50,'flex'],['Cloud storage',19.99,'flex'],['Music',16.99,'flex']]},
-      {name:'Beauty & fitness',        own:'mine',   items:[
-        ['Gym',149.00,'flex'],['Nails',110.00,'flex'],['Pedicure',70.00,'flex']]}
+      {name:'Home',                    own:'mine', items:[
+        ['Rent',1545.00,'locked'],['Electricity',125.00,'locked'],
+        ['Gas & heat',65.00,'locked'],['Internet',75.00,'locked'],
+        ['Renters insurance',18.00,'locked']]},
+      {name:'Debt payments',           own:'mine', items:[
+        ['Card A',420.00,'temp'],['Card B',210.00,'temp'],['Store credit',45.00,'temp']]},
+      {name:'Food & day-to-day',       own:'mine', items:[
+        ['Groceries',420.00,'locked'],['Delivery',220.00,'flex'],
+        ['Coffee',85.00,'flex'],['Household',70.00,'locked']]},
+      {name:'Car',                     own:'mine', items:[
+        ['Car payment',525.00,'locked'],['Car insurance',195.00,'locked'],
+        ['Fuel',175.00,'locked']]},
+      {name:'Beauty & fitness',        own:'mine', items:[
+        ['Gym',55.00,'flex'],['Nails',60.00,'flex'],['Pedicure',45.00,'flex'],
+        ['Hair',95.00,'flex']]},
+      {name:'Phone, tech & streaming', own:'mine', items:[
+        ['Phone plan',95.00,'locked'],['Streaming bundle',22.99,'flex'],
+        ['Video service',18.99,'flex'],['Device cover',14.99,'flex'],
+        ['Music',11.99,'flex'],['Cloud storage',9.99,'flex']]},
+      {name:'The dog',                 own:'mine', items:[
+        ['Dog food & treats',70.00,'locked'],['Pet insurance',56.00,'locked']]}
     ]
   },
 
   cards:[
-    {id:'amex',  name:'Card A', balance:3980.00, apr:0.2699, goal:1000.00, day:19, firstPay:'2026-08-19'},
-    {id:'apple', name:'Card B', balance:1840.00, apr:0.2449, goal:600.00,  day:27, firstPay:'2026-08-28'}
+    {id:'amex',  name:'Card A', balance:3240.00, apr:0.2699, goal:800.00, day:19, firstPay:'2026-08-19'},
+    {id:'apple', name:'Card B', balance:1480.00, apr:0.2449, goal:400.00, day:27, firstPay:'2026-08-28'}
   ],
 
   strategy:'goal',
   goalDate:'2026-12-31',
-  livingFloor:1385.00,
-  rentFloat:1750.00,
+  livingFloor:1040.00,
+  rentFloat:1545.00,
   monthsAhead:14
 };
 
@@ -1840,7 +1831,7 @@ function applyWorkbook(sheets){
     const set=(k,fn)=>{ const v=num(map[k]); if(v!==undefined && !isNaN(v)){ fn(v); changed++; } };
     set('your_paycheck',            v=> MONEY.income[0].amount=v);
     set('your_paycheck_every_days', v=> MONEY.income[0].every=Math.round(v));
-    set('other_income',                  v=> MONEY.income[1].amount=v);
+    set('other_income',                  v=>{ if(MONEY.income[1]) MONEY.income[1].amount=v; });
     set('bare_living',              v=> MONEY.livingFloor=v);
     set('amex_balance',  v=> MONEY.cards[0].balance=v);
     set('amex_apr',      v=> MONEY.cards[0].apr=v);
@@ -1877,7 +1868,7 @@ function applyWorkbook(sheets){
     }
     if(bills.length){
       MONEY.bills=bills;
-      const recurring=MONEY.care.filter(c=>c.everyWeeks);   /* keep the parent's hair */
+      const recurring=MONEY.care.filter(c=>c.everyWeeks);   /* the repeating appointments */
       MONEY.care=care.concat(recurring);
       const rent=bills.find(b=>b.name==='Rent'); if(rent) MONEY.rentFloat=rent.amount;
     }
@@ -2148,7 +2139,7 @@ function billOccurrences(from, to){
     });
     cur=new Date(y,m+1,1);
   }
-  /* appointments on a repeating cycle: nails, pedicure, the parent's hair. These are
+  /* appointments on a repeating cycle: nails, pedicure, hair. These are
      paid on the day, in cash, so the money has to be there before it. */
   MONEY.care.filter(c=>c.everyWeeks).forEach(c=>{
     let d=D(c.anchor);
@@ -2388,7 +2379,7 @@ function project(yourFloor, otherFloor){
                 days:Math.round(((P[j]?P[j].start:pp.end)-pp.start)/86400000)||pp.days, extra:j-i-1};
   });
 
-  /* the parent's benefit lands once a month, your paychecks every two weeks, so one stretch
+  /* a second income, when there is one, lands monthly while paychecks land fortnightly, so one stretch
      gets their money and the next gets none. Carrying part of it forward makes
      every two weeks look the same. Same money, just held for a date not yet here. */
   const mine=P.filter(p=>p.src.id==='mine' && p.stretch);
@@ -2582,10 +2573,9 @@ function renderNow(){
       <b>${next?next.src.label:'Your paycheck'}</b> lands on <b>${next?fmtDay(next.date):''}</b> and brings <b>${money(next?next.src.amount:0)}</b>.</div>
     <div class="note note--gold"><span class="hd">Keep an eye on rent</span>
       Rent is <b>${money(MONEY.rentFloat)}</b> and it is due on the 1st, before that month's paychecks land. So you are always saving toward it a paycheck early. When you set that money aside, your balance will look bigger than it really is.</div>
-    <div class="note note--gold"><span class="hd">Carry it forward</span>
-      the parent&rsquo;s benefit lands once a month. Your paychecks land every two weeks. So one stretch has their money in it and the next one does not. When the big one arrives, hold part of it back for the quiet stretch. Same money, spread even, and no two weeks ever feels thin.</div>
+    
     <div class="note"><span class="hd">What a day costs you</span>
-      Groceries, gas, coffee, household and the parent&rsquo;s weekend cash come to <b>${money0(livingRates().daily)}</b> a
+      Groceries, fuel, coffee, household and the dog come to <b>${money0(livingRates().daily)}</b> a
       month &mdash; about <b>${money0(livingRates().dayRate)} a day</b>. That is the number to hold in your head
       between cheques, not a monthly budget you have to remember.</div>`;
 }
@@ -2625,7 +2615,7 @@ function recommendFor(pp, shallow){
   /* 1. The days this cheque actually has to cover. */
   take(r.dayRate*days, 'Day to day',
     `${money0(r.dayRate)} a day for the ${days} days until the next money lands &mdash; groceries, coffee, `
-    + `household, the parent's weekend cash. That is your own ${money0(r.daily)} a month, spread evenly.`);
+    + `household, the dog. That is your own ${money0(r.daily)} a month, spread evenly.`);
 
   /* 2. The category that has never had a line, which is why it lands on a card. */
   const cu = CUSHION.get('have',0), cuGoal = Math.max(1, CUSHION.get('goal', CUSHION.target));
@@ -2650,7 +2640,7 @@ function recommendFor(pp, shallow){
 
 /* What all the cheques in the next month put at the cards between them. One
    paycheck extrapolated is meaningless here: the smaller one barely clears its own days,
-   and the parent's benefit carries most of the payment. */
+   and a second income, where there is one, carries most of the payment. */
 function cardsThisMonth(){
   const end=addDays(TODAY, 31);
   return periods(9).filter(q=>q.start<end).reduce((sum,q)=>{
@@ -2671,7 +2661,7 @@ function renderRecommendation(pp, rec){
   const owed=MONEY.cards.reduce((t,c)=>t+c.balance,0);
   rec.lines.forEach(l=>{ if(l.reason==='__CARDS__'){
     l.reason = l.amount < 60
-      ? `Your own cheque has little left once its days are covered &mdash; the parent's benefit is where most of the card `
+      ? `This cheque has little left once its days are covered &mdash; the bigger cheques are where most of the card `
         + `payment comes from. Across every cheque this month that is about <b>${money0(monthly)}</b> at the `
         + `${money0(owed)} still owed. What matters is that something goes every single time.`
       : `The same amount every cheque, not a big one when it feels possible. Across every cheque this month that `
@@ -2775,7 +2765,7 @@ function renderPaycheck(){
     <div class="pstat"><div class="l">Stays with you</div><div class="v ok">${money0(p.keep)}</div></div>`
     + (st && st.extra>0 ? `
     <div class="pstat" style="flex:1 1 100%;background:var(--ok-bg);border-color:#CBD9C5">
-      <div class="l">The whole ${st.days} day stretch, with the parent&rsquo;s benefit counted</div>
+      <div class="l">The whole ${st.days} day stretch</div>
       <div class="v ok">${money(st.keep)} <span style="font-family:Inter,sans-serif;font-size:12px;font-weight:600;color:var(--espresso-mute)">before you carry any forward</span></div>
     </div>` : '')
     + (st && st.carry>0 ? `
@@ -3059,11 +3049,12 @@ const CUSHION={
   /* Certain costs with uncertain dates. These are the reason a plan that balances
      on paper still ends the month behind — nothing else on the dashboard names them. */
   absorbs:[
-    ['Skincare &amp; personal care', 100],
-    ['Clothing &amp; shoes',          75],
-    ['Car repairs, tires, oil',       85],
-    ['Medical, dental, prescriptions',40],
-    ['Gifts &amp; holidays',          60]
+    ['Skincare &amp; personal care',  95],
+    ['Car repairs, tires, oil',       90],
+    ['Clothing &amp; shoes',          80],
+    ['Vet &amp; pet care',            60],
+    ['Gifts &amp; holidays',          55],
+    ['Medical, dental, prescriptions',45]
   ],
   get:(k,d)=>{ try{ const v=localStorage.getItem('moneyflow.demo.cushion.'+k); return v===null?d:parseFloat(v)||0; }catch(e){ return d; } },
   set(k,v){ try{ localStorage.setItem('moneyflow.demo.cushion.'+k, String(v)); }catch(e){} }
@@ -3334,7 +3325,9 @@ function renderAfford(){
 }
 
 function renderOverview(){
-  const inc=MONEY.income[0].amount*26/12 + MONEY.income[1].amount;
+  const mineMo=MONEY.income[0].amount*26/12;
+  const otherMo=MONEY.income[1] ? MONEY.income[1].amount : 0;
+  const inc=mineMo + otherMo;
   const cats=MONEY.spend.categories.map((c,i)=>({
     n:c.name, v:c.items.reduce((s,x)=>s+x[1],0), c:CSSVar('--c'+(i+1))
   })).sort((a,b)=>b.v-a.v);
@@ -3353,7 +3346,7 @@ function renderOverview(){
   const cuBy    = [cu, cu+ (ps[0]? (recommendFor(ps[0],true).lines.find(l=>l.name==='Into the cushion')||{amount:0}).amount : 0)];
   $('#ovKpi').innerHTML = `
     <div class="k"><span class="lab">Household, a month</span><span class="num">${money0(inc)}</span>
-      <span class="sub">yours ${money0(MONEY.income[0].amount*26/12)} · the parent's ${money0(MONEY.income[1].amount)}</span>
+      <span class="sub">${otherMo ? 'yours '+money0(mineMo)+' &middot; theirs '+money0(otherMo) : money0(MONEY.income[0].amount)+' every '+MONEY.income[0].every+' days'}</span>
       <span class="viz">${miniBars(inBy, CSSVar('--c3'))}</span></div>
     <div class="k warn"><span class="lab">Fixed expenses</span><span class="num">${money0(out - r.daily - cats.filter(c=>c.n==='Debt payments').reduce((s,c)=>s+c.v,0))}</span>
       <span class="sub">bills with a due date</span>
@@ -3758,7 +3751,7 @@ function renderWhere(){
 
   const gap = d.income - d.out, short = gap < 0;
   $('#whereSub').textContent = WHERE.view==='both'
-    ? `Your paycheck and the parent's benefit together — ${money(d.income)} a month`
+    ? `Everything you earn — ${money(d.income)} a month`
     : `Your paycheck alone — ${money(d.income)} a month, covering everything except the parent's own care`;
   $('#whereNote').innerHTML = short
     ? `That is <b>${money(-gap)} a month more than you bring in</b> on your own. The parent&rsquo;s benefit closes it. This is the number that changes when the cards are gone.`
@@ -3865,6 +3858,16 @@ function recompute(){
     renderWhere();
   }));
   $('#splitShare').addEventListener('input',()=>{ WHERE.share=+$('#splitShare').value; renderWhere(); });
+  /* A household can have one income or two. The shared-cost slider and the
+     with/without toggle only mean something when there are two, so they are
+     declared with data-needs="two-incomes" and removed when there are not. */
+  if(MONEY.income.length < 2){
+    /* Hidden rather than removed: the renderers still write into these nodes, and
+       a household can gain a second income without the page needing a reload. */
+    $$('[data-needs="two-incomes"]').forEach(el=>{ el.hidden=true; el.style.display='none'; });
+    WHERE.view='mine';
+  }
+
   /* The affordability question. Deterministic, offline, instant. */
   (function affordUI(){
     const amt=$('#affAmt');
