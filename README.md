@@ -7,7 +7,7 @@ Seven pages, a dozen charts drawn from scratch in SVG, and a scheduler that turn
 a pay cycle and a pile of due dates into an answer to the only question that
 matters day to day: *what can I actually spend right now?*
 
-**[Live demo](#)** · every figure in it is fictional.
+**[Live demo](https://aidenmark.github.io/money-flow/)** · every figure in it is fictional.
 
 ---
 
